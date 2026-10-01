@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Safe Place — Admin</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #0b0b12;
+            color: white;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .login,
+        .dashboard {
+            display: none;
+        }
+
+        .active {
+            display: block;
+        }
+
+        .card {
+            background: #15151f;
+            border: 1px solid #292936;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #aaaab7;
+            line-height: 1.6;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin-top: 12px;
+            background: #0d0d14;
+            border: 1px solid #30303d;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #7777ff;
+        }
+
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 13px 20px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .primary {
+            background: white;
+            color: #111;
+        }
+
+        .secondary {
+            background: #252532;
+            color: white;
+        }
+
+        .danger {
+            background: #4a2028;
+            color: #ffb8c5;
+        }
+
+        .message {
+            background: #101018;
+            border: 1px solid #292936;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .message-text {
+            white-space: pre-wrap;
+            line-height: 1.7;
+            color: #e4e4eb;
+            margin-bottom: 15px;
+        }
+
+        .date {
+            color: #777785;
+            font-size: 13px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .error {
+            background: #351820;
+            border: 1px solid #713040;
+            color: #ffb8c5;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            display: none;
+            word-break: break-word;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 50px 20px;
+            color: #777785;
+        }
+
+        .loading {
+            color: #aaaab7;
+            padding: 20px 0;
+        }
+
+        @media (max-width: 600px) {
+
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            h1 {
+                font-size: 27px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+<div class="container">
+
+
+    <!-- LOGIN -->
+
+    <section id="loginScreen" class="login active">
+
+        <div class="card">
+
+            <h1>Safe Place</h1>
+
+            <p>
+                Owner dashboard
+            </p>
+
+            <br>
+
+            <input
+                type="email"
+                id="email"
+                placeholder="Your email"
+            >
+
+            <input
+                type="password"
+                id="password"
+                placeholder="Your password"
+            >
+
+            <button
+                class="primary"
+                onclick="login()"
+            >
+                Login
+            </button>
+
+            <div
+                id="loginError"
+                class="error"
+            ></div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- DASHBOARD -->
+
+    <section id="dashboardScreen" class="dashboard">
+
+        <div class="topbar">
+
+            <div>
+
+                <h1>Your Messages</h1>
+
+                <p>
+                    Messages people have submitted.
+                </p>
+
+            </div>
+
+            <div>
+
+                <button
+                    class="secondary"
+                    onclick="loadMessages()"
+                >
+                    Refresh
+                </button>
+
+                <button
+                    class="danger"
+                    onclick="logout()"
+                >
+                    Logout
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="messages"
+        ></div>
+
+    </section>
+
+
+</div>
+
+
+<script>
+
+
+    // ==========================================
+    // SUPABASE
+    // ==========================================
+
+    const SUPABASE_URL =
+        "https://baimhrofbwplisbqxoyz.supabase.co";
+
+    const SUPABASE_KEY =
+        "sb_publishable_Rg9oM4yEGs5xRYQua-gYnw_fxryuXiD";
+
+
+    const supabaseClient =
+        supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
+
+
+
+    // ==========================================
+    // LOGIN
+    // ==========================================
+
+    async function login() {
+
+        const email =
+            document.getElementById(
+                "email"
+            ).value.trim();
+
+        const password =
+            document.getElementById(
+                "password"
+            ).value;
+
+        const errorBox =
+            document.getElementById(
+                "loginError"
+            );
+
+
+        errorBox.style.display =
+            "none";
+
+
+        if (!email || !password) {
+
+            errorBox.textContent =
+                "Enter your email and password.";
+
+            errorBox.style.display =
+                "block";
+
+            return;
+        }
+
+
+        const { data, error } =
+            await supabaseClient.auth.signInWithPassword({
+
+                email: email,
+
+                password: password
+
+            });
+
+
+        if (error) {
+
+            errorBox.textContent =
+                error.message;
+
+            errorBox.style.display =
+                "block";
+
+            return;
+        }
+
+
+        document.getElementById(
+            "loginScreen"
+        ).classList.remove("active");
+
+
+        document.getElementById(
+            "dashboardScreen"
+        ).classList.add("active");
+
+
+        loadMessages();
+    }
+
+
+
+    // ==========================================
+    // LOAD MESSAGES
+    // ==========================================
+
+    async function loadMessages() {
+
+        const messagesBox =
+            document.getElementById(
+                "messages"
+            );
+
+
+        messagesBox.innerHTML =
+            '<div class="loading">Loading messages...</div>';
+
+
+        const { data, error } =
+            await supabaseClient
+                .from("messages")
+                .select("*")
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
+
+
+        if (error) {
+
+            messagesBox.innerHTML =
+                `
+                <div class="card">
+                    <div class="error" style="display:block">
+                        ${escapeHTML(error.message)}
+                    </div>
+                </div>
+                `;
+
+            return;
+        }
+
+
+        if (!data || data.length === 0) {
+
+            messagesBox.innerHTML =
+                `
+                <div class="card empty">
+                    No messages yet.
+                </div>
+                `;
+
+            return;
+        }
+
+
+        messagesBox.innerHTML = "";
+
+
+        data.forEach(function(message) {
+
+            const date =
+                new Date(
+                    message.created_at
+                ).toLocaleString();
+
+
+            const messageElement =
+                document.createElement(
+                    "div"
+                );
+
+
+            messageElement.className =
+                "message";
+
+
+            messageElement.innerHTML =
+                `
+                <div class="message-text">
+                    ${escapeHTML(message.message)}
+                </div>
+
+                <div class="date">
+                    ${escapeHTML(date)}
+                </div>
+
+                <button
+                    class="danger"
+                    onclick="deleteMessage(${message.id})"
+                >
+                    Delete
+                </button>
+                `;
+
+
+            messagesBox.appendChild(
+                messageElement
+            );
+
+        });
+
+    }
+
+
+
+    // ==========================================
+    // DELETE MESSAGE
+    // ==========================================
+
+    async function deleteMessage(id) {
+
+        const confirmed =
+            confirm(
+                "Delete this message?"
+            );
+
+
+        if (!confirmed) {
+            return;
+        }
+
+
+        const { error } =
+            await supabaseClient
+                .from("messages")
+                .delete()
+                .eq(
+                    "id",
+                    id
+                );
+
+
+        if (error) {
+
+            alert(
+                "Could not delete message: " +
+                error.message
+            );
+
+            return;
+        }
+
+
+        loadMessages();
+    }
+
+
+
+    // ==========================================
+    // LOGOUT
+    // ==========================================
+
+    async function logout() {
+
+        await supabaseClient.auth.signOut();
+
+        document.getElementById(
+            "dashboardScreen"
+        ).classList.remove("active");
+
+
+        document.getElementById(
+            "loginScreen"
+        ).classList.add("active");
+    }
+
+
+
+    // ==========================================
+    // ESCAPE TEXT
+    // ==========================================
+
+    function escapeHTML(text) {
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+        div.textContent =
+            text;
+
+        return div.innerHTML;
+    }
+
+
+
+    // ==========================================
+    // CHECK EXISTING LOGIN
+    // ==========================================
+
+    async function checkLogin() {
+
+        const { data } =
+            await supabaseClient.auth.getSession();
+
+
+        if (
+            data &&
+            data.session
+        ) {
+
+            document.getElementById(
+                "loginScreen"
+            ).classList.remove("active");
+
+
+            document.getElementById(
+                "dashboardScreen"
+            ).classList.add("active");
+
+
+            loadMessages();
+        }
+    }
+
+
+    checkLogin();
+
+
+</script>
+
+</body>
+</html>

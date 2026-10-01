@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Safe Place</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #0b0b12;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon {
+            font-size: 55px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 18px;
+        }
+
+        h2 {
+            font-size: 30px;
+            margin-bottom: 18px;
+        }
+
+        p {
+            color: #b9b9c5;
+            line-height: 1.7;
+            font-size: 17px;
+            margin-bottom: 25px;
+        }
+
+        button {
+            border: none;
+            border-radius: 14px;
+            padding: 15px 28px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 7px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        .primary {
+            background: white;
+            color: #111;
+        }
+
+        .secondary {
+            background: #20202b;
+            color: white;
+        }
+
+        textarea {
+            width: 100%;
+            height: 260px;
+            resize: vertical;
+            background: #15151f;
+            border: 1px solid #30303c;
+            border-radius: 18px;
+            padding: 20px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        textarea:focus {
+            border-color: #7777ff;
+        }
+
+        .counter {
+            text-align: right;
+            color: #777785;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .message-preview {
+            background: #15151f;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px 0;
+            color: #d8d8df;
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 15px;
+            color: #aaa;
+        }
+
+        .error {
+            display: none;
+            background: #351820;
+            border: 1px solid #713040;
+            color: #ffb8c5;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            word-break: break-word;
+        }
+
+        .success {
+            color: #b9ffc8;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- WELCOME SCREEN -->
+    <section id="welcome" class="screen active">
+
+        <div class="icon">🌙</div>
+
+        <h1>This is a safe place.</h1>
+
+        <p>
+            You can write whatever is on your mind.
+            You don't have to make it sound perfect.
+            Just say what you need to say.
+        </p>
+
+        <button class="primary" onclick="showScreen('choice')">
+            Continue
+        </button>
+
+    </section>
+
+
+    <!-- CHOICE SCREEN -->
+    <section id="choice" class="screen">
+
+        <div class="icon">🫶</div>
+
+        <h2>Before you continue...</h2>
+
+        <p>
+            If you feel like this is stupid,
+            or you don't feel like talking,
+            you can leave.
+        </p>
+
+        <button class="primary" onclick="showScreen('write')">
+            I'll continue
+        </button>
+
+        <button class="secondary" onclick="showScreen('goodbye')">
+            I'll leave
+        </button>
+
+    </section>
+
+
+    <!-- WRITE SCREEN -->
+    <section id="write" class="screen">
+
+        <div class="icon">✍️</div>
+
+        <h2>What's going on?</h2>
+
+        <p>
+            Take your time.
+            Write as much or as little as you want.
+        </p>
+
+        <textarea
+            id="message"
+            maxlength="5000"
+            placeholder="Write what's on your mind..."
+            oninput="updateCounter()"
+        ></textarea>
+
+        <div class="counter">
+            <span id="counter">0</span>/5000
+        </div>
+
+        <button
+            class="primary"
+            id="sendButton"
+            onclick="submitMessage()">
+            Send
+        </button>
+
+        <button
+            class="secondary"
+            onclick="showScreen('choice')">
+            Go back
+        </button>
+
+        <div id="loading" class="loading">
+            Sending...
+        </div>
+
+        <div id="error" class="error"></div>
+
+        <p class="small-note">
+            Your message can be read by the owner of this website.
+        </p>
+
+    </section>
+
+
+    <!-- THANK YOU SCREEN -->
+    <section id="thanks" class="screen">
+
+        <div class="icon">🤍</div>
+
+        <h2>Thank you for saying it.</h2>
+
+        <p>
+            You didn't have to keep it inside.
+        </p>
+
+        <div
+            id="messagePreview"
+            class="message-preview">
+        </div>
+
+        <button
+            class="primary"
+            onclick="startAgain()">
+            Start again
+        </button>
+
+    </section>
+
+
+    <!-- GOODBYE SCREEN -->
+    <section id="goodbye" class="screen">
+
+        <div class="icon">🌙</div>
+
+        <h2>That's okay.</h2>
+
+        <p>
+            You don't have to say anything you don't want to say.
+            Take care of yourself.
+        </p>
+
+        <button
+            class="secondary"
+            onclick="showScreen('welcome')">
+            Go back
+        </button>
+
+    </section>
+
+</div>
+
+
+<script>
+
+    // =====================================================
+    // SUPABASE CONNECTION
+    // =====================================================
+
+    const SUPABASE_URL =
+        "https://baimhrofbwplisbqxoyz.supabase.co";
+
+    const SUPABASE_KEY =
+        "sb_publishable_Rg9oM4yEGs5xRYQua-gYnw_fxryuXiD";
+
+    const supabaseClient =
+        supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
+
+
+    // =====================================================
+    // CHANGE SCREEN
+    // =====================================================
+
+    function showScreen(screenName) {
+
+        const screens =
+            document.querySelectorAll(".screen");
+
+        screens.forEach(function(screen) {
+            screen.classList.remove("active");
+        });
+
+        const selectedScreen =
+            document.getElementById(screenName);
+
+        selectedScreen.classList.add("active");
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    }
+
+
+    // =====================================================
+    // CHARACTER COUNTER
+    // =====================================================
+
+    function updateCounter() {
+
+        const message =
+            document.getElementById("message");
+
+        const counter =
+            document.getElementById("counter");
+
+        counter.textContent =
+            message.value.length;
+    }
+
+
+    // =====================================================
+    // SEND MESSAGE
+    // =====================================================
+
+    async function submitMessage() {
+
+        const messageBox =
+            document.getElementById("message");
+
+        const message =
+            messageBox.value.trim();
+
+        const loading =
+            document.getElementById("loading");
+
+        const errorBox =
+            document.getElementById("error");
+
+        const sendButton =
+            document.getElementById("sendButton");
+
+
+        // Remove old error
+        errorBox.style.display = "none";
+        errorBox.textContent = "";
+
+
+        // Make sure something was written
+        if (message.length === 0) {
+
+            errorBox.textContent =
+                "Please write something first.";
+
+            errorBox.style.display =
+                "block";
+
+            return;
+        }
+
+
+        // Start loading
+        loading.style.display =
+            "block";
+
+        sendButton.disabled =
+            true;
+
+
+        try {
+
+            const result =
+                await supabaseClient
+                    .from("messages")
+                    .insert([
+                        {
+                            message: message
+                        }
+                    ]);
+
+
+            if (result.error) {
+
+                throw result.error;
+            }
+
+
+            // Show the submitted message
+            document.getElementById(
+                "messagePreview"
+            ).textContent = message;
+
+
+            // Clear the textbox
+            messageBox.value = "";
+
+            updateCounter();
+
+
+            // Stop loading
+            loading.style.display =
+                "none";
+
+            sendButton.disabled =
+                false;
+
+
+            // Show thank-you screen
+            showScreen("thanks");
+
+
+        } catch (error) {
+
+            console.error(
+                "Supabase error:",
+                error
+            );
+
+
+            loading.style.display =
+                "none";
+
+            sendButton.disabled =
+                false;
+
+
+            errorBox.textContent =
+                "ERROR: " +
+                (
+                    error.message ||
+                    "Something went wrong."
+                );
+
+
+            errorBox.style.display =
+                "block";
+        }
+    }
+
+
+    // =====================================================
+    // START AGAIN
+    // =====================================================
+
+    function startAgain() {
+
+        document.getElementById(
+            "message"
+        ).value = "";
+
+        updateCounter();
+
+        showScreen("welcome");
+    }
+
+</script>
+
+</body>
+</html>
